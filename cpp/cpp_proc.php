@@ -4,17 +4,11 @@ class cpp_proc
 {
 	static function read_text( $buf, $constants, $stopnames )
 	{
-		/*
-		 * Macros we will ignore.
-		 */
-		$skip = array( 'include', 'undef', 'define', 'error' );
-
 		$text = '';
 
 		while( $buf->more() )
 		{
 			$line = $buf->get_line();
-
 			list( $name, $val ) = self::parse_macro( $line );
 
 			/*
@@ -27,24 +21,21 @@ class cpp_proc
 			}
 
 			/*
-			 * If this is not a macro, or not a macro we care about,
-			 * treat is as text.
+			 * If this is a conditional macro, start processing it.
 			 */
-			if( !$name || in_array( $name, $skip ) ) {
-				$text .= $line;
-				continue;
-			}
-
-			$buf->unget_line( $line );
-			$macro = self::read_macro( $buf );
-			$name = $macro->name;
-
 			if( $name == 'if' || $name == 'ifdef' || $name == 'ifndef' ) {
+				$buf->unget_line( $line );
+				$macro = self::read_macro( $buf );
 				$text .= self::read_if( $macro, $buf, $constants );
 				continue;
 			}
 
-			$buf->error( "Unexpected macro: $line" );
+			/*
+			 * If this is not a macro, or not a macro we care about,
+			 * treat is as text.
+			 */
+			$text .= $line;
+			continue;
 		}
 
 		return $text;
