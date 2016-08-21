@@ -113,8 +113,7 @@ class cpp_cond_parse
 
 		// <num>
 		if( ctype_digit( $buf->peek() ) ) {
-			$num = $buf->read_set( '0123456789' );
-			return [$num];
+			return [self::read_number( $buf )];
 		}
 
 		// <id>
@@ -148,6 +147,39 @@ class cpp_cond_parse
 			$buf->error( "id expected" );
 		}
 		return [$id];
+	}
+
+	// <num>: <digit>... | "0x" <hex-digit>...
+	private static function read_number( $buf )
+	{
+		$digits = '0123456789';
+
+		$num = $buf->get();
+
+		if( $num == '0' && $buf->peek() == 'x' )
+		{
+			$num .= $buf->get();
+			$val = '';
+
+			$digits .= 'abcdefABCDEF';
+			$val = $buf->read_set( $digits );
+
+			if( $val === '' ) {
+				$buf->error( "digit expected after 'x'" );
+				return false;
+			}
+			$num .= $val;
+		}
+		else
+		{
+			$num .= $buf->read_set( $digits );
+		}
+
+		if( $buf->peek() == 'L' ) {
+			$num .= $buf->get();
+		}
+
+		return $num;
 	}
 
 	static function compose( $cond )
