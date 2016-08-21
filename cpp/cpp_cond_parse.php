@@ -69,8 +69,10 @@ class cpp_cond_parse
 	{
 		$ops = array();
 
+		$buf->read_set( " \t\r\n" );
 		while( $buf->get_str( '!' ) ) {
 			$ops[] = '!';
+			$buf->read_set( " \t\r\n" );
 		}
 
 		// "defined" "(" <id> ")"
