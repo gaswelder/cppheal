@@ -2,7 +2,7 @@
 
 Utility to heal #ifdef shrapnel wounds on C source files.
 
-	$ php ./cppheal.php [-r] [-D <name>[=<val>]]... [-U <name>]... <path>...
+	$ cppheal [-r] [-D <name>[=<val>]]... [-U <name>]... <path>...
 
 
 Suppose we have a large C code tree with all kinds of `#if` and `#ifdef`
