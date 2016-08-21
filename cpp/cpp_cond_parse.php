@@ -64,6 +64,7 @@ class cpp_cond_parse
 	}
 
 	// <atom>: ( "!"? "defined(" <id> ")" ) | <id> | <num> | "(" <expr> ")"
+	// | <id> "(" <args> ")"
 	private static function read_atom( $buf )
 	{
 		$ops = array();
@@ -116,6 +117,31 @@ class cpp_cond_parse
 
 		// <id>
 		$id = $buf->read_set( self::ID_CHARS );
+		/*
+		 * We don't really parse macro functions here, just treat the
+		 * entire expression as a name. Also, we don't parse strings
+		 * inside, which may screw the parsing if there happens to be
+		 * a string with '(' or ')' symbols.
+		 */
+		if( $buf->get_str( '(' ) ) {
+			$id .= '(';
+			// <args>
+			$braces = 1;
+			while( $buf->more() && $braces > 0 ) {
+				$ch = $buf->get();
+				if( $ch == ')' ) {
+					$braces--;
+				}
+				else if( $ch == '(' ) {
+					$braces++;
+				}
+
+				$id .= $ch;
+			}
+			if( $braces != 0 ) {
+				$buf->error( "')' expected" );
+			}
+		}
 		if( !$id ) {
 			$buf->error( "id expected" );
 		}
