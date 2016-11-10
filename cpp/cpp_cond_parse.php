@@ -72,6 +72,9 @@ class cpp_cond_parse
 		return null;
 	}
 
+	/*
+	 * Reads next "atomic" part of an expression.
+	 */
 	// <atom>: ( "!"? "defined(" <id> ")" ) | <id> | <num> | "(" <expr> ")"
 	// | <id> "(" <args> ")"
 	private static function read_atom($buf)
@@ -84,27 +87,9 @@ class cpp_cond_parse
 			$buf->read_set(" \t\r\n");
 		}
 
-		// "defined" "(" <id> ")"
+		// defined(...)
 		if ($buf->get_str('defined')) {
-			$brace = false;
-
-			$buf->read_set(" \t\r\n");
-			if ($buf->peek() == '(') {
-				$brace = true;
-				$buf->get();
-				$buf->read_set(" \t\r\n");
-			}
-
-			$id = $buf->read_set(self::ID_CHARS);
-			$buf->read_set(" \t\r\n");
-
-			if ($brace && $buf->get() != ')') {
-				$buf->error("')' expected");
-				return false;
-			}
-			$buf->read_set(" \t");
-			array_unshift($ops, 'defined');
-			array_unshift($ops, $id);
+			self::read_defined($buf, $ops);
 			return $ops;
 		}
 
@@ -125,6 +110,10 @@ class cpp_cond_parse
 
 		// <id>
 		$id = $buf->read_set(self::ID_CHARS);
+		if (!$id) {
+			$buf->error("identifier expected");
+		}
+
 		/*
 		 * We don't really parse macro functions here, just treat the
 		 * entire expression as a name. Also, we don't parse strings
@@ -150,10 +139,33 @@ class cpp_cond_parse
 				$buf->error("')' expected");
 			}
 		}
-		if (!$id) {
-			$buf->error("id expected");
-		}
+
 		return [$id];
+	}
+
+	// "defined" ( <id> | "(" <id> ")" )
+	private static function read_defined($buf, &$ops)
+	{
+		$brace = false;
+
+		$buf->read_set(" \t\r\n");
+		if ($buf->peek() == '(') {
+			$brace = true;
+			$buf->get();
+			$buf->read_set(" \t\r\n");
+		}
+
+		$id = $buf->read_set(self::ID_CHARS);
+		$buf->read_set(" \t\r\n");
+
+		if ($brace && $buf->get() != ')') {
+			$buf->error("')' expected");
+			return false;
+		}
+		$buf->read_set(" \t");
+		array_unshift($ops, 'defined');
+		array_unshift($ops, $id);
+		return $ops;
 	}
 
 	// <num>: (<digit>... | "0x" <hex-digit>...) U? L? L?

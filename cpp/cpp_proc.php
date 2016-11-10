@@ -16,6 +16,13 @@ class cpp_proc
 		while ($buf->more()) {
 			$line = $buf->get_line();
 			list($name, $val) = self::parse_macro($line);
+			/*
+			 * If this line is not a macro, pass it.
+			 */
+			if(!$name) {
+				$text .= $line;
+				continue;
+			}
 
 			/*
 			 * If this is a stop macro, don't parse it and put the
@@ -27,21 +34,26 @@ class cpp_proc
 			}
 
 			/*
-			 * If this is a conditional macro, start processing it.
+			 * If this is a conditional macro, process it.
 			 */
 			if ($name == 'if' || $name == 'ifdef' || $name == 'ifndef') {
+				/*
+				 * Macro can be split into several lines. In the code
+				 * above, we didn't bother with that, but not we have
+				 * to return the line back and read the full macro
+				 * properly.
+				 */
 				$buf->unget_line($line);
 				$macro = self::read_macro($buf);
+
 				$text .= self::read_if($macro, $buf, $constants);
 				continue;
 			}
 
 			/*
-			 * If this is not a macro, or not a macro we care about,
-			 * treat is as text.
+			 * Don't bother with other macros.
 			 */
 			$text .= $line;
-			continue;
 		}
 
 		return $text;
