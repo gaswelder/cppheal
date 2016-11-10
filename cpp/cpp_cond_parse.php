@@ -149,7 +149,7 @@ class cpp_cond_parse
 		return [$id];
 	}
 
-	// <num>: <digit>... | "0x" <hex-digit>...
+	// <num>: (<digit>... | "0x" <hex-digit>...) U? L? L?
 	private static function read_number( $buf )
 	{
 		$digits = '0123456789';
@@ -173,6 +173,14 @@ class cpp_cond_parse
 		else
 		{
 			$num .= $buf->read_set( $digits );
+		}
+
+		if( $buf->peek() == 'U' ) {
+			$num .= $buf->get();
+		}
+
+		if( $buf->peek() == 'L' ) {
+			$num .= $buf->get();
 		}
 
 		if( $buf->peek() == 'L' ) {
