@@ -4,12 +4,24 @@ class buf
 	public $n;
 	public $val;
 	public $pos;
+	private $linenum;
+	private $filename;
 
-	function __construct($val)
+	function __construct($val, $filename = "")
 	{
 		$this->val = $val;
 		$this->n = strlen($val);
 		$this->pos = 0;
+		$this->linenum = 0;
+		$this->filename = $filename;
+	}
+
+	function loc()
+	{
+		if ($this->filename) {
+			return "$this->filename:$this->linenum";
+		}
+		return "line $this->linenum";
 	}
 
 	/*
@@ -25,13 +37,16 @@ class buf
 		if (!$this->more()) {
 			return null;
 		}
-		return $this->val[$this->pos++];
+		$ch = $this->val[$this->pos++];
+		if ($ch == "\n") $this->linenum++;
+		return $ch;
 	}
 
 	function unget($ch)
 	{
 		$this->pos--;
 		assert($ch == $this->val[$this->pos]);
+		if ($ch == "\n") $this->linenum--;
 	}
 
 	function peek()
@@ -57,12 +72,12 @@ class buf
 		}
 		else {
 			$p++;
+			$this->linenum++;
 		}
 
 		$line = substr($this->val, $this->pos, $p - $this->pos);
 		$this->pos = $p;
 
-		//fwrite( STDERR, "* line: $line" );
 		return $line;
 	}
 
@@ -72,9 +87,19 @@ class buf
 		$p = $this->pos - $n;
 		assert(substr($this->val, $p, $n) == $line);
 		$this->pos = $p;
+		if (strpos($line, "\n") !== false) {
+			$this->linenum--;
+		}
 	}
 
 	function error($msg)
+	{
+		$msg = $this->err($msg);
+		trigger_error($msg);
+		exit;
+	}
+
+	function err($msg)
 	{
 		$width = 20;
 
@@ -94,8 +119,7 @@ class buf
 			$context .= "|{end}";
 		}
 
-		trigger_error("$msg at '$curr': '$context'");
-		exit;
+		return "$msg at '$curr': '$context'";
 	}
 
 	/*

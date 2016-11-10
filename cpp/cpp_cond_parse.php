@@ -25,13 +25,16 @@ class cpp_cond_parse
 	 * Parses a condition string and returns scalar, array or object
 	 * representation.
 	 */
-	static function parse($str)
+	static function parse($str, &$error)
 	{
+		$error = null;
 		$buf = new buf($str);
 
-		$expr = self::expr($buf);
+		$expr = self::expr($buf, $error);
+		if ($error) return null;
+
 		if ($buf->more()) {
-			$buf->error("Unexpected character: ".$buf->peek());
+			$error = $buf->err("Unexpected character: ".$buf->peek());
 			return null;
 		}
 
@@ -39,11 +42,15 @@ class cpp_cond_parse
 	}
 
 	// <expr>: <atom> [<op> <atom>]...
-	private static function expr($buf)
+	private static function expr($buf, &$error)
 	{
-		$buf->read_set("\r\n\t ");
+		$error = null;
 
-		$left = self::read_atom($buf);
+		$buf->read_set("\r\n\t ");
+		$left = self::read_atom($buf, $error);
+		if ($error) {
+			return null;
+		}
 
 		$buf->read_set("\r\n\t ");
 		$op = self::read_op($buf);
@@ -51,7 +58,8 @@ class cpp_cond_parse
 			return $left;
 		}
 
-		$right = self::expr($buf);
+		$right = self::expr($buf, $error);
+		if ($error) return null;
 
 		return (object)array(
 			'op' => $op,
@@ -77,8 +85,9 @@ class cpp_cond_parse
 	 */
 	// <atom>: ( "!"? "defined(" <id> ")" ) | <id> | <num> | "(" <expr> ")"
 	// | <id> "(" <args> ")"
-	private static function read_atom($buf)
+	private static function read_atom($buf, &$error)
 	{
+		$error = null;
 		$ops = array();
 
 		$buf->read_set(" \t\r\n");
@@ -89,29 +98,34 @@ class cpp_cond_parse
 
 		// defined(...)
 		if ($buf->get_str('defined')) {
-			self::read_defined($buf, $ops);
+			self::read_defined($buf, $ops, $error);
+			if ($error) return null;
 			return $ops;
 		}
 
 		// "(" <expr> ")"
 		if ($buf->get_str('(')) {
-			$node = self::expr($buf);
+			$node = self::expr($buf, $error);
+			if ($error) return null;
 			if (!$buf->get_str(')')) {
-				$buf->error(") expected");
-				return false;
+				$error = $buf->err(") expected");
+				return null;
 			}
 			return $node;
 		}
 
 		// <num>
 		if (ctype_digit($buf->peek())) {
-			return [self::read_number($buf)];
+			$n = self::read_number($buf, $error);
+			if ($error) return null;
+			return [$n];
 		}
 
 		// <id>
 		$id = $buf->read_set(self::ID_CHARS);
 		if (!$id) {
-			$buf->error("identifier expected");
+			$error = $buf->err("identifier expected");
+			return null;
 		}
 
 		/*
@@ -136,7 +150,8 @@ class cpp_cond_parse
 				$id .= $ch;
 			}
 			if ($braces != 0) {
-				$buf->error("')' expected");
+				$error = $buf->err("')' expected");
+				return null;
 			}
 		}
 
@@ -144,7 +159,7 @@ class cpp_cond_parse
 	}
 
 	// "defined" ( <id> | "(" <id> ")" )
-	private static function read_defined($buf, &$ops)
+	private static function read_defined($buf, &$ops, &$error)
 	{
 		$brace = false;
 
@@ -159,7 +174,7 @@ class cpp_cond_parse
 		$buf->read_set(" \t\r\n");
 
 		if ($brace && $buf->get() != ')') {
-			$buf->error("')' expected");
+			$error = $buf->err("')' expected");
 			return false;
 		}
 		$buf->read_set(" \t");
@@ -169,7 +184,7 @@ class cpp_cond_parse
 	}
 
 	// <num>: (<digit>... | "0x" <hex-digit>...) U? L? L?
-	private static function read_number($buf)
+	private static function read_number($buf, &$error)
 	{
 		$digits = '0123456789';
 
@@ -183,7 +198,7 @@ class cpp_cond_parse
 			$val = $buf->read_set($digits);
 
 			if ($val === '') {
-				$buf->error("digit expected after 'x'");
+				$error = $buf->err("digit expected after 'x'");
 				return false;
 			}
 			$num .= $val;

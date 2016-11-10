@@ -1,6 +1,11 @@
 <?php
 class cpp_proc
 {
+	static function rewrite($buf, $constants, &$error)
+	{
+		return self::read_text($buf, $constants, array(), $error);
+	}
+
 	/*
 	 * Reads C text from the buffer, applies values specified in
 	 * the $constants map and returns the result.
@@ -9,7 +14,7 @@ class cpp_proc
 	 * one of the macros specified in the array. This allows, for
 	 * example, to parse one condition branch and stop.
 	 */
-	static function read_text($buf, $constants, $stopnames = array())
+	static function read_text($buf, $constants, $stopnames, &$error)
 	{
 		$text = '';
 
@@ -19,7 +24,7 @@ class cpp_proc
 			/*
 			 * If this line is not a macro, pass it.
 			 */
-			if(!$name) {
+			if (!$name) {
 				$text .= $line;
 				continue;
 			}
@@ -46,7 +51,10 @@ class cpp_proc
 				$buf->unget_line($line);
 				$macro = self::read_macro($buf);
 
-				$text .= self::read_if($macro, $buf, $constants);
+				$text .= self::read_if($macro, $buf, $constants, $error);
+				if ($error) {
+					return null;
+				}
 				continue;
 			}
 
@@ -59,7 +67,7 @@ class cpp_proc
 		return $text;
 	}
 
-	private static function read_if($macro, $buf, $constants)
+	private static function read_if($macro, $buf, $constants, &$error)
 	{
 		$name = $macro->name;
 		$val = $macro->val;
@@ -77,16 +85,15 @@ class cpp_proc
 		}
 
 		$branches = array();
+		$stoplist = array('endif', 'else', 'elif');
 
 		/*
 		 * First branch ('if')
 		 */
-		$cond = cpp_cond_parse::parse($macro->val);
-		$text = self::read_text($buf, $constants, array(
-			'endif',
-			'else',
-			'elif'
-		));
+		$cond = cpp_cond_parse::parse($macro->val, $error);
+		if ($error) return null;
+		$text = self::read_text($buf, $constants, $stoplist, $error);
+		if ($error) return null;
 		$branches[] = array(
 			$cond,
 			$text,
@@ -98,12 +105,12 @@ class cpp_proc
 		 */
 		$macro = self::read_macro($buf);
 		while ($macro && $macro->name == 'elif') {
-			$cond = cpp_cond_parse::parse($macro->val);
-			$text = self::read_text($buf, $constants, array(
-				'elif',
-				'else',
-				'endif'
-			));
+			$cond = cpp_cond_parse::parse($macro->val, $error);
+			if ($error) {
+				return null;
+			}
+			$text = self::read_text($buf, $constants, $stoplist, $error);
+			if ($error) return null;
 			$branches[] = array(
 				$cond,
 				$text,
@@ -119,7 +126,8 @@ class cpp_proc
 		if ($macro && $macro->name == 'else') {
 			$text = self::read_text($buf, $constants, array(
 				'endif'
-			));
+			), $error);
+			if ($error) return null;
 			$branches[] = array(
 				true,
 				$text,
@@ -133,7 +141,8 @@ class cpp_proc
 		 * Endif
 		 */
 		if (!$macro || $macro->name != 'endif') {
-			$buf->error("#endif expected");
+			$error = $buf->err("#endif expected");
+			return null;
 		}
 
 		$changed = cpp_proc_reduce::reduce($branches, $constants);

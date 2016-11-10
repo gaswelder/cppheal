@@ -2,7 +2,6 @@
 require "lib/buf.php";
 require "lib/cli.php";
 
-require "cpp/cpp.php";
 require "cpp/cpp_cond_calc.php";
 require "cpp/cpp_cond_parse.php";
 require "cpp/cpp_proc.php";
@@ -111,7 +110,14 @@ function process_file($path, $macros)
 	}
 	//err( "# $path" );
 	$orig = file_get_contents($path);
-	$text = cpp::process($orig, $macros);
+	$buf = new buf($orig, $path);
+	$text = cpp_proc::rewrite($buf, $macros, $error);
+	if ($error) {
+		$where = $buf->loc();
+		fwrite(STDERR, "$where: $error\n");
+		return;
+	}
+
 	if ($text != $orig) {
 		err("$path");
 		file_put_contents($path, $text);
