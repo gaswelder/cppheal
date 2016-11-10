@@ -2,7 +2,15 @@
 
 class cpp_proc
 {
-	static function read_text( $buf, $constants, $stopnames )
+	/*
+	 * Reads C text from the buffer, applies values specified in
+	 * the $constants map and returns the result.
+	 *
+	 * If $stopnames array is not empty, stops before the line with
+	 * one of the macros specified in the array. This allows, for
+	 * example, to parse one condition branch and stop.
+	 */
+	static function read_text( $buf, $constants, $stopnames = array() )
 	{
 		$text = '';
 
