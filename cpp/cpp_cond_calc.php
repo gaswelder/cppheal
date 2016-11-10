@@ -12,9 +12,13 @@ class cpp_cond_calc
 	 * To simplify the expression using the given constants, we simply
 	 * perform the recursive calculation replacing constants with
 	 * available values.
+	 *
+	 * Returns true if the condition has been modified.
 	 */
-	static function calc(&$cond, $constants)
+	static function calc(&$cond, $constants, &$error)
 	{
+		$error = null;
+
 		if (is_scalar($cond)) {
 			return false;
 		}
@@ -23,7 +27,7 @@ class cpp_cond_calc
 			return self::calc_array($cond, $constants);
 		}
 
-		return self::calc_node($cond, $constants);
+		return self::calc_node($cond, $constants, $error);
 	}
 
 	private static function calc_array(&$cond, $constants)
@@ -72,18 +76,20 @@ class cpp_cond_calc
 		return true;
 	}
 
-	private static function calc_node(&$cond, $constants)
+	private static function calc_node(&$cond, $constants, &$error)
 	{
 		/*
 		 * Calculate both operands. If nothing changed, return.
 		 */
 		$changed = false;
-		if (self::calc($cond->left, $constants)) {
+		if (self::calc($cond->left, $constants, $error)) {
 			$changed = true;
 		}
-		if (self::calc($cond->right, $constants)) {
+		if ($error) return false;
+		if (self::calc($cond->right, $constants, $error)) {
 			$changed = true;
 		}
+		if ($error) return false;
 		if (!$changed) {
 			return false;
 		}
@@ -122,7 +128,8 @@ class cpp_cond_calc
 			}
 			break;
 		default:
-			trigger_error("Unknown operator: $cond->op");
+			$error = "Unknown operator: $cond->op";
+			return false;
 		}
 
 		return true;

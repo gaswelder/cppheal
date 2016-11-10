@@ -1,16 +1,17 @@
 <?php
 class cpp_proc_reduce
 {
-	static function reduce(&$branches, $constants)
+	static function reduce(&$branches, $constants, &$error)
 	{
 		$changed = false;
 
 		foreach ($branches as $i => $branch) {
 			$cond = $branches[$i][0];
 			$orig = $cond;
-			if (cpp_cond_calc::calc($cond, $constants)) {
+			if (cpp_cond_calc::calc($cond, $constants, $error)) {
 				$changed = true;
 			}
+			if ($error) return false;
 			$branches[$i][0] = $cond;
 		}
 

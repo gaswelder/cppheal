@@ -145,7 +145,8 @@ class cpp_proc
 			return null;
 		}
 
-		$changed = cpp_proc_reduce::reduce($branches, $constants);
+		$changed = cpp_proc_reduce::reduce($branches, $constants, $error);
+		if ($error) return null;
 		return self::compose_branches($branches, $changed, $macro->orig);
 	}
 
