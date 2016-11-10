@@ -31,6 +31,10 @@ function main( $args )
 		"r" => "bool"
 	));
 
+	if(!$flags) {
+		usage();
+	}
+
 	$constants = array();
 
 	foreach( $flags['D'] as $spec ) {

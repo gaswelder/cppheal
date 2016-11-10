@@ -41,7 +41,8 @@ function parse_args( &$args, $defs )
 
 		$key = substr( $arg, 1 );
 		if( !isset( $defs[$key] ) ) {
-			fatal( "Unknown flag: $arg" );
+			err( "Unknown flag: $arg" );
+			return null;
 		}
 
 		$spec = $defs[$key];
