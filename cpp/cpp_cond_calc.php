@@ -1,5 +1,4 @@
 <?php
-
 class cpp_cond_calc
 {
 	/*
@@ -14,20 +13,20 @@ class cpp_cond_calc
 	 * perform the recursive calculation replacing constants with
 	 * available values.
 	 */
-	static function calc( &$cond, $constants )
+	static function calc(&$cond, $constants)
 	{
-		if( is_scalar( $cond ) ) {
+		if (is_scalar($cond)) {
 			return false;
 		}
 
-		if( is_array( $cond ) ) {
-			return self::calc_array( $cond, $constants );
+		if (is_array($cond)) {
+			return self::calc_array($cond, $constants);
 		}
 
-		return self::calc_node( $cond, $constants );
+		return self::calc_node($cond, $constants);
 	}
 
-	private static function calc_array( &$cond, $constants )
+	private static function calc_array(&$cond, $constants)
 	{
 		$id = $cond[0];
 
@@ -35,7 +34,7 @@ class cpp_cond_calc
 		 * If we don't know anything about this constant, return
 		 * the expression as it is.
 		 */
-		if( !isset( $constants[$id] ) ) {
+		if (!isset($constants[$id])) {
 			return false;
 		}
 
@@ -47,26 +46,24 @@ class cpp_cond_calc
 		/*
 		 * The 'defined' keyword will be at position 1, if at all.
 		 */
-		$n = count( $cond );
+		$n = count($cond);
 		$i = 1;
-		if( $i < $n && $cond[$i] == 'defined' ) {
-			if( $val !== false ) {
+		if ($i < $n && $cond[$i] == 'defined') {
+			if ($val !== false) {
 				$val = true;
 			}
 			$i++;
 		}
 
-		while( $i < $n )
-		{
+		while ($i < $n) {
 			$op = $cond[$i];
 			$i++;
-			switch( $op ) {
-				case '!':
-					$val = !$val;
-					break;
-
-				default:
-					trigger_error( "Unknown operation: $op" );
+			switch ($op) {
+			case '!':
+				$val = !$val;
+				break;
+			default:
+				trigger_error("Unknown operation: $op");
 			}
 		}
 
@@ -75,12 +72,12 @@ class cpp_cond_calc
 		return true;
 	}
 
-	private static function calc_node( &$cond, $constants )
+	private static function calc_node(&$cond, $constants)
 	{
-		$changed = self::calc( $cond->left, $constants )
-			|| self::calc( $cond->right, $constants );
+		$changed = self::calc($cond->left, $constants) || self::calc($cond->right,
+			$constants);
 
-		if( !$changed ) {
+		if (!$changed) {
 			return false;
 		}
 
@@ -88,11 +85,11 @@ class cpp_cond_calc
 		 * Hide the left/right distinction to avoid dealing with two
 		 * cases. Note that this works if both operands are scalars too.
 		 */
-		if( is_scalar( $cond->left ) ) {
+		if (is_scalar($cond->left)) {
 			$val = $cond->left;
 			$other = $cond->right;
 		}
-		else if( is_scalar( $cond->right ) ) {
+		else if (is_scalar($cond->right)) {
 			$val = $cond->right;
 			$other = $cond->left;
 		}
@@ -100,44 +97,42 @@ class cpp_cond_calc
 			// Can't do anything more, so return as is.
 			return true;
 		}
-
-		switch( $cond->op )
-		{
-			case '&&':
-				if( $val == '0' ) {
-					$cond = '0';
-				} else {
-					$cond = $other;
-				}
-				break;
-
-			case '||':
-				if( $val == '0' ) {
-					$cond = $other;
-				} else {
-					$cond = '1';
-				}
-				break;
-
-			default:
-				trigger_error( "Unknown operator: $cond->op" );
+		switch ($cond->op) {
+		case '&&':
+			if ($val == '0'){
+				$cond = '0';
+			}
+			else {
+				$cond = $other;
+			}
+			break;
+		case '||':
+			if ($val == '0'){
+				$cond = $other;
+			}
+			else {
+				$cond = '1';
+			}
+			break;
+		default:
+			trigger_error("Unknown operator: $cond->op");
 		}
 
 		return true;
 	}
 
-	static function is_true( $cond )
+	static function is_true($cond)
 	{
-		if( !is_scalar( $cond ) ) {
+		if (!is_scalar($cond)) {
 			return false;
 		}
 
 		return $cond == '1' || $cond === true;
 	}
 
-	static function is_false( $cond )
+	static function is_false($cond)
 	{
-		if( !is_scalar( $cond ) ) {
+		if (!is_scalar($cond)) {
 			return false;
 		}
 

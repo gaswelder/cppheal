@@ -1,5 +1,4 @@
 <?php
-
 class cpp_proc
 {
 	/*
@@ -10,31 +9,30 @@ class cpp_proc
 	 * one of the macros specified in the array. This allows, for
 	 * example, to parse one condition branch and stop.
 	 */
-	static function read_text( $buf, $constants, $stopnames = array() )
+	static function read_text($buf, $constants, $stopnames = array())
 	{
 		$text = '';
 
-		while( $buf->more() )
-		{
+		while ($buf->more()) {
 			$line = $buf->get_line();
-			list( $name, $val ) = self::parse_macro( $line );
+			list($name, $val) = self::parse_macro($line);
 
 			/*
 			 * If this is a stop macro, don't parse it and put the
 			 * line back.
 			 */
-			if( in_array( $name, $stopnames ) ) {
-				$buf->unget_line( $line );
+			if (in_array($name, $stopnames)) {
+				$buf->unget_line($line);
 				return $text;
 			}
 
 			/*
 			 * If this is a conditional macro, start processing it.
 			 */
-			if( $name == 'if' || $name == 'ifdef' || $name == 'ifndef' ) {
-				$buf->unget_line( $line );
-				$macro = self::read_macro( $buf );
-				$text .= self::read_if( $macro, $buf, $constants );
+			if ($name == 'if' || $name == 'ifdef' || $name == 'ifndef') {
+				$buf->unget_line($line);
+				$macro = self::read_macro($buf);
+				$text .= self::read_if($macro, $buf, $constants);
 				continue;
 			}
 
@@ -49,7 +47,7 @@ class cpp_proc
 		return $text;
 	}
 
-	private static function read_if( $macro, $buf, $constants )
+	private static function read_if($macro, $buf, $constants)
 	{
 		$name = $macro->name;
 		$val = $macro->val;
@@ -57,11 +55,11 @@ class cpp_proc
 		/*
 		 * Rewrite ifdef ... as if defined(...)
 		 */
-		if( $macro->name == 'ifdef' ) {
+		if ($macro->name == 'ifdef') {
 			$macro->name = 'if';
 			$macro->val = "defined($macro->val)";
 		}
-		else if( $macro->name == 'ifndef' ) {
+		else if ($macro->name == 'ifndef') {
 			$macro->name = 'if';
 			$macro->val = "!defined($macro->val)";
 		}
@@ -71,54 +69,75 @@ class cpp_proc
 		/*
 		 * First branch ('if')
 		 */
-		$cond = cpp_cond_parse::parse( $macro->val );
-		$text = self::read_text( $buf, $constants, array( 'endif', 'else', 'elif' ) );
-		$branches[] = array( $cond, $text, $macro->orig );
+		$cond = cpp_cond_parse::parse($macro->val);
+		$text = self::read_text($buf, $constants, array(
+			'endif',
+			'else',
+			'elif'
+		));
+		$branches[] = array(
+			$cond,
+			$text,
+			$macro->orig
+		);
 
 		/*
 		 * Zero or more 'elif' branches
 		 */
-		$macro = self::read_macro( $buf );
-		while( $macro && $macro->name == 'elif' )
-		{
-			$cond = cpp_cond_parse::parse( $macro->val );
-			$text = self::read_text( $buf, $constants, array( 'elif', 'else', 'endif' ) );
-			$branches[] = array( $cond, $text, $macro->orig );
+		$macro = self::read_macro($buf);
+		while ($macro && $macro->name == 'elif') {
+			$cond = cpp_cond_parse::parse($macro->val);
+			$text = self::read_text($buf, $constants, array(
+				'elif',
+				'else',
+				'endif'
+			));
+			$branches[] = array(
+				$cond,
+				$text,
+				$macro->orig
+			);
 
-			$macro = self::read_macro( $buf );
+			$macro = self::read_macro($buf);
 		}
 
 		/*
 		 * One optional 'else' branch
 		 */
-		if( $macro && $macro->name == 'else' ) {
-			$text = self::read_text( $buf, $constants, array( 'endif' ) );
-			$branches[] = array( true, $text, $macro->orig );
+		if ($macro && $macro->name == 'else') {
+			$text = self::read_text($buf, $constants, array(
+				'endif'
+			));
+			$branches[] = array(
+				true,
+				$text,
+				$macro->orig
+			);
 
-			$macro = self::read_macro( $buf );
+			$macro = self::read_macro($buf);
 		}
 
 		/*
 		 * Endif
 		 */
-		if( !$macro || $macro->name != 'endif' ) {
-			$buf->error( "#endif expected" );
+		if (!$macro || $macro->name != 'endif') {
+			$buf->error("#endif expected");
 		}
 
-		$changed = cpp_proc_reduce::reduce( $branches, $constants );
-		return self::compose_branches( $branches, $changed, $macro->orig );
+		$changed = cpp_proc_reduce::reduce($branches, $constants);
+		return self::compose_branches($branches, $changed, $macro->orig);
 	}
 
-	private static function read_macro( $buf )
+	private static function read_macro($buf)
 	{
 		$line = $buf->get_line();
 
 		/*
 		 * If not a macro, return nothing.
 		 */
-		list( $name, $val ) = self::parse_macro( $line );
-		if( !$name ) {
-			$buf->unget_line( $line );
+		list($name, $val) = self::parse_macro($line);
+		if (!$name) {
+			$buf->unget_line($line);
 			return null;
 		}
 
@@ -132,11 +151,10 @@ class cpp_proc
 		 * If this is a macro we need to parse, unwrap lines broken
 		 * with a backslash.
 		 */
-		while( preg_match( '/\\\r?\n$/', $line, $m ) )
-		{
-			$n = strlen( $line );
+		while (preg_match('/\\\r?\n$/', $line, $m)) {
+			$n = strlen($line);
 
-			if( $line[$n-2] == "\r" ) {
+			if ($line[$n-2] == "\r") {
 				$eol = "\r\n";
 			}
 			else {
@@ -146,80 +164,79 @@ class cpp_proc
 			$next = $buf->get_line();
 			$original .= $next;
 
-			$line = substr( $line, 0, - (strlen( $eol ) + 1) );
-			$line .= $eol . $next;
+			$line = substr($line, 0, -(strlen($eol)+1));
+			$line .= $eol.$next;
 		}
-		list( $name, $val ) = self::parse_macro( $line );
+		list($name, $val) = self::parse_macro($line);
 
-		return (object) array(
+		return (object)array(
 			'name' => $name,
 			'val' => $val,
 			'orig' => $original
 		);
 	}
 
-	private static function parse_macro( $line )
+	private static function parse_macro($line)
 	{
 		$p = '/^\s*#\s*([a-z]+)\s+/';
-		if( !preg_match( $p, $line, $m ) ) {
-			return array( null, null );
+		if (!preg_match($p, $line, $m)) {
+			return array(null, null);
 		}
 
 		$name = $m[1];
-		$val = trim( substr( $line, strlen( $m[0] ) ) );
+		$val = trim(substr($line, strlen($m[0])));
 
-		while( 1 ) {
-			$p = strpos( $val, '/*' );
-			if( $p === false ) break;
-			$p2 = strpos( $val, '*/', $p );
-			if( $p2 === false ) break;
+		while (1) {
+			$p = strpos($val, '/*');
+			if ($p === false) break;
+			$p2 = strpos($val, '*/', $p);
+			if ($p2 === false) break;
 			$orig = $val;
-			$val = substr_replace( $val, '', $p, ($p2 - $p) + 2 );
+			$val = substr_replace($val, '', $p, ($p2 - $p)+2);
 		}
 
-		return array( $name, $val );
+		return array($name, $val);
 	}
 
-
-	private static function compose_branches( $branches, $changed, $orig_endif )
+	private static function compose_branches($branches, $changed, $orig_endif)
 	{
 		$text = '';
 
-		$n = count( $branches );
-		if( !$n ) return $text;
+		$n = count($branches);
+		if (!$n) return $text;
 
-		if( $n == 1 && cpp_cond_calc::is_true( $branches[0][0] ) ) {
+		if ($n == 1 && cpp_cond_calc::is_true($branches[0][0])) {
 			return $branches[0][1];
 		}
 
-		list( $cond, $body, $orig ) = $branches[0];
-		if( $changed ) {
-			$text = '#if ' . cpp_cond_parse::compose( $cond ) . "\n";
-		} else {
+		list($cond, $body, $orig) = $branches[0];
+		if ($changed) {
+			$text = '#if '.cpp_cond_parse::compose($cond)."\n";
+		}
+		else {
 			$text = $orig;
 		}
 		$text .= $body;
 
 		$i = 1;
-		while( $i < $n )
-		{
-			list( $cond, $body, $orig ) = $branches[$i++];
+		while ($i < $n) {
+			list($cond, $body, $orig) = $branches[$i++];
 
-			if( !$changed ) {
+			if (!$changed) {
 				$text .= $orig;
 				$text .= $body;
 				continue;
 			}
 
-			if( cpp_cond_calc::is_true( $cond ) && $i == $n ) {
+			if (cpp_cond_calc::is_true($cond) && $i == $n) {
 				$text .= "#else\n";
 			}
 			else {
-				$text .= "#elif " . cpp_cond_parse::compose( $cond ) . "\n";
+				$text .= "#elif ".cpp_cond_parse::compose($cond)."\n";
 			}
 			$text .= $body;
 		}
-		if( $changed ) {
+		if ($changed) {
 			$text .= "#endif\n";
 		}
 		else {

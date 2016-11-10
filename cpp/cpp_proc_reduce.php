@@ -1,34 +1,32 @@
 <?php
-
 class cpp_proc_reduce
 {
-	static function reduce( &$branches, $constants )
+	static function reduce(&$branches, $constants)
 	{
 		$changed = false;
 
-		foreach( $branches as $i => $branch ) {
+		foreach ($branches as $i => $branch) {
 			$cond = $branches[$i][0];
 			$orig = $cond;
-			if( cpp_cond_calc::calc( $cond, $constants ) ) {
+			if (cpp_cond_calc::calc($cond, $constants)) {
 				$changed = true;
 			}
 			$branches[$i][0] = $cond;
 		}
 
-		if( !$changed ) {
+		if (!$changed) {
 			return false;
 		}
 
 		/*
 		 * Remove branches with false condition.
 		 */
-		$n = count( $branches );
+		$n = count($branches);
 		$i = 0;
-		while( $i < $n )
-		{
+		while ($i < $n) {
 			$cond = $branches[$i][0];
-			if( cpp_cond_calc::is_false( $cond ) ) {
-				array_splice( $branches, $i, 1 );
+			if (cpp_cond_calc::is_false($cond)) {
+				array_splice($branches, $i, 1);
 				$n--;
 				continue;
 			}
@@ -44,22 +42,22 @@ class cpp_proc_reduce
 		 * other branches below it, including the "else" branch, will
 		 * not be taken anymore.
 		 */
-		$pos = self::true_branch_index( $branches );
-		if( $pos >= 0 ) {
-			while( $pos < count( $branches ) - 1 ) {
-				array_pop( $branches );
+		$pos = self::true_branch_index($branches);
+		if ($pos >= 0) {
+			while ($pos < count($branches)-1) {
+				array_pop($branches);
 			}
 		}
 
 		return true;
 	}
 
-	private static function true_branch_index( $branches )
+	private static function true_branch_index($branches)
 	{
-		$n = count( $branches );
-		for( $i = 0; $i < $n; $i++ ) {
+		$n = count($branches);
+		for ($i = 0; $i < $n; $i++) {
 			$cond = $branches[$i][0];
-			if( cpp_cond_calc::is_true( $cond ) ) {
+			if (cpp_cond_calc::is_true($cond)) {
 				return $i;
 			}
 		}
