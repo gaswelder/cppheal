@@ -95,44 +95,51 @@ class cpp_cond_calc
 		}
 
 		/*
-		 * Hide the left/right distinction to avoid dealing with two
-		 * cases. Note that this works if both operands are scalars too.
+		 * Make sure we know the operator.
 		 */
-		if (is_scalar($cond->left)) {
-			$val = $cond->left;
-			$other = $cond->right;
-		}
-		else if (is_scalar($cond->right)) {
-			$val = $cond->right;
-			$other = $cond->left;
-		}
-		else {
-			// Can't do anything more, so return as is.
-			return true;
-		}
-		switch ($cond->op) {
-		case '&&':
-			if ($val == '0'){
-				$cond = '0';
-			}
-			else {
-				$cond = $other;
-			}
-			break;
-		case '||':
-			if ($val == '0'){
-				$cond = $other;
-			}
-			else {
-				$cond = '1';
-			}
-			break;
-		default:
+		$ops = array('&&', '||');
+		if (!in_array($cond->op, $ops)) {
 			$error = "Unknown operator: $cond->op";
 			return false;
 		}
 
-		return true;
+		/*
+		 * One or both operands may be scalar values or not. An operand
+		 * will be non-scalar if there was not enough information in
+		 * the given constants to reduce its value.
+		 */
+		$s1 = is_scalar($cond->left);
+		$s2 = is_scalar($cond->right);
+
+		/*
+		 * If both values are non-scalar, nothing we can do.
+		 */
+		if (!$s1 && !$s2) return false;
+
+		/*
+		 * For boolean operators && and || we need only one of the
+		 * operands to be a scalar value and the order of the operands
+		 * is not important. To simplify this case, let $v1 be
+		 * the scalar value.
+		 */
+		if ($s1) {
+			$v1 = $cond->left;
+			$v2 = $cond->right;
+		}
+		else {
+			$v1 = $cond->right;
+			$v2 = $cond->left;
+		}
+		switch ($cond->op) {
+		case '&&':
+			$cond = ($v1 == '0') ? '0' : $v2;
+			return true;
+		case '||':
+			$cond = ($v1 == '1') ? '1' : $v2;
+			return true;
+		}
+
+		return false;
 	}
 
 	static function is_true($cond)
