@@ -74,9 +74,16 @@ class cpp_cond_calc
 
 	private static function calc_node(&$cond, $constants)
 	{
-		$changed = self::calc($cond->left, $constants) || self::calc($cond->right,
-			$constants);
-
+		/*
+		 * Calculate both operands. If nothing changed, return.
+		 */
+		$changed = false;
+		if (self::calc($cond->left, $constants)) {
+			$changed = true;
+		}
+		if (self::calc($cond->right, $constants)) {
+			$changed = true;
+		}
 		if (!$changed) {
 			return false;
 		}
