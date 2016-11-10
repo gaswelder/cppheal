@@ -1,4 +1,21 @@
 <?php
+class num_token
+{
+	public $raw;
+	public $val;
+
+	function __construct($raw, $val)
+	{
+		$this->raw = $raw;
+		$this->val = $val;
+	}
+
+	function __toString()
+	{
+		return $this->raw;
+	}
+}
+
 class cpp_cond_parse
 {
 	/*
@@ -207,6 +224,8 @@ class cpp_cond_parse
 			$num .= $buf->read_set($digits);
 		}
 
+		$val = intval($num, 0);
+
 		if ($buf->peek() == 'U') {
 			$num .= $buf->get();
 		}
@@ -219,7 +238,7 @@ class cpp_cond_parse
 			$num .= $buf->get();
 		}
 
-		return $num;
+		return new num_token($num, $val);
 	}
 
 	static function compose($cond)

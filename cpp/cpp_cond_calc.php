@@ -35,6 +35,25 @@ class cpp_cond_calc
 		$id = $cond[0];
 
 		/*
+		 * The parsed condition may be just a one-element array
+		 * with a numeric literal.
+		 */
+		if ($id instanceof num_token) {
+			if (count($cond) != 1) {
+				var_dump($cond);
+				trigger_error("Unexpected condition format");
+				return false;
+			}
+			$cond = $id->val;
+			return true;
+		}
+
+		if (!ctype_alpha($id[0]) && $id[0] != '_') {
+			trigger_error("Unknown identifier form: $id");
+			return false;
+		}
+
+		/*
 		 * If we don't know anything about this constant, return
 		 * the expression as it is.
 		 */
@@ -97,7 +116,18 @@ class cpp_cond_calc
 		/*
 		 * Make sure we know the operator.
 		 */
-		$ops = array('&&', '||');
+		$ops = array(
+			'&&',
+			'||',
+			'<',
+			'>',
+			'<=',
+			'>=',
+			'==',
+			'!=',
+			'-',
+			'+'
+		);
 		if (!in_array($cond->op, $ops)) {
 			$error = "Unknown operator: $cond->op";
 			return false;
@@ -139,7 +169,60 @@ class cpp_cond_calc
 			return true;
 		}
 
-		return false;
+		/*
+		 * For all other operators we need both values to be scalar.
+		 * If they are not, we leave the condition as is.
+		 */
+		if (!$s1 || !$s2) {
+			return false;
+		}
+
+		if (!is_numeric($cond->left) || !is_numeric($cond->right)) {
+			$error = "Can't calculate '$cond->left $cond->op $cond->right'";
+			return false;
+		}
+
+		$a = $cond->left;
+		$b = $cond->right;
+		$r = null;
+		switch ($cond->op) {
+		case '-':
+			$r = $a - $b;
+			break;
+		case '+':
+			$r = $a + $b;
+			break;
+		}
+
+		if ($r !== null) {
+			$cond = $r;
+			return true;
+		}
+		switch ($cond->op) {
+		case '<':
+			$r = $a < $b;
+			break;
+		case '>':
+			$r = $a > $b;
+			break;
+		case '<=':
+			$r = $a <= $b;
+			break;
+		case '>=':
+			$r = $a >= $b;
+			break;
+		case '==':
+			$r = $a == $b;
+			break;
+		case '!=':
+			$r = $a != $b;
+			break;
+		default:
+			$error = "Unhandled operator: $cond->op";
+			return false;
+		}
+		$cond = $r ? '1' : '0';
+		return true;
 	}
 
 	static function is_true($cond)
