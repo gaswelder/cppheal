@@ -178,7 +178,7 @@ class cpp_cond_calc
 		}
 
 		if (!is_numeric($cond->left) || !is_numeric($cond->right)) {
-			$error = "Can't calculate '$cond->left $cond->op $cond->right'";
+			//$error = "Can't calculate '$cond->left $cond->op $cond->right'";
 			return false;
 		}
 
