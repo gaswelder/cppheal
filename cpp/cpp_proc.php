@@ -78,8 +78,7 @@ class cpp_proc
 		if ($macro->name == 'ifdef') {
 			$macro->name = 'if';
 			$macro->val = "defined($macro->val)";
-		}
-		else if ($macro->name == 'ifndef') {
+		} else if ($macro->name == 'ifndef') {
 			$macro->name = 'if';
 			$macro->val = "!defined($macro->val)";
 		}
@@ -176,18 +175,17 @@ class cpp_proc
 		while (preg_match('/\\\r?\n$/', $line, $m)) {
 			$n = strlen($line);
 
-			if ($line[$n-2] == "\r") {
+			if ($line[$n - 2] == "\r") {
 				$eol = "\r\n";
-			}
-			else {
+			} else {
 				$eol = "\n";
 			}
 
 			$next = $buf->get_line();
 			$original .= $next;
 
-			$line = substr($line, 0, -(strlen($eol)+1));
-			$line .= $eol.$next;
+			$line = substr($line, 0, - (strlen($eol) + 1));
+			$line .= $eol . $next;
 		}
 		list($name, $val) = self::parse_macro($line);
 
@@ -214,7 +212,7 @@ class cpp_proc
 			$p2 = strpos($val, '*/', $p);
 			if ($p2 === false) break;
 			$orig = $val;
-			$val = substr_replace($val, '', $p, ($p2 - $p)+2);
+			$val = substr_replace($val, '', $p, ($p2 - $p) + 2);
 		}
 
 		return array($name, $val);
@@ -233,9 +231,8 @@ class cpp_proc
 
 		list($cond, $body, $orig) = $branches[0];
 		if ($changed) {
-			$text = '#if '.cpp_cond_parse::compose($cond)."\n";
-		}
-		else {
+			$text = '#if ' . cpp_cond_parse::compose($cond) . "\n";
+		} else {
 			$text = $orig;
 		}
 		$text .= $body;
@@ -252,21 +249,17 @@ class cpp_proc
 
 			if (cpp_cond_calc::is_true($cond) && $i == $n) {
 				$text .= "#else\n";
-			}
-			else {
-				$text .= "#elif ".cpp_cond_parse::compose($cond)."\n";
+			} else {
+				$text .= "#elif " . cpp_cond_parse::compose($cond) . "\n";
 			}
 			$text .= $body;
 		}
 		if ($changed) {
 			$text .= "#endif\n";
-		}
-		else {
+		} else {
 			$text .= $orig_endif;
 		}
 
 		return $text;
 	}
 }
-
-?>
