@@ -1,4 +1,5 @@
 <?php
+
 require "lib/buf.php";
 require "lib/cli.php";
 
@@ -41,8 +42,7 @@ function main($args)
 		if (strpos($spec, '=')) {
 			list($name, $val) = array_map('trim', explode('=', $spec, 2));
 			$constants[$name] = $val;
-		}
-		else {
+		} else {
 			$name = $spec;
 			$constants[$name] = true;
 		}
@@ -76,8 +76,7 @@ function main($args)
 				continue;
 			}
 			process_dir($path, $constants, $recurse);
-		}
-		else {
+		} else {
 			process_file($path, $constants);
 		}
 	}
@@ -94,8 +93,7 @@ function process_dir($path, $macros, $recurse)
 		$p = "$path/$name";
 		if (is_dir($p)) {
 			if ($recurse) process_dir($p, $macros, $recurse);
-		}
-		else {
+		} else {
 			process_file($p, $macros);
 		}
 	}
@@ -123,5 +121,3 @@ function process_file($path, $macros)
 		file_put_contents($path, $text);
 	}
 }
-
-?>
